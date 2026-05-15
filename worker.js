@@ -30,6 +30,9 @@ const MESSAGES = (process.env.MESSAGES || "Tes pesan dari worker Railway")
   .map((item) => item.trim())
   .filter(Boolean);
 
+// penanda grup yang akan dikirim berikutnya
+let currentGroupIndex = 0;
+
 function isStillActive() {
   const activeUntil = START_TIME + ACTIVE_DURATION_HOURS * 60 * 60 * 1000;
   return Date.now() < activeUntil;
@@ -38,6 +41,12 @@ function isStillActive() {
 function pickMessage() {
   const index = Math.floor(Math.random() * MESSAGES.length);
   return MESSAGES[index];
+}
+
+function getNextGroup() {
+  const groupJid = GROUP_JIDS[currentGroupIndex];
+  currentGroupIndex = (currentGroupIndex + 1) % GROUP_JIDS.length;
+  return groupJid;
 }
 
 async function sendText(groupJid, text) {
@@ -84,19 +93,16 @@ async function runJob() {
 
   console.log("======================================");
   console.log(`Mulai job: ${new Date().toISOString()}`);
-  console.log(`Total grup: ${GROUP_JIDS.length}`);
 
+  const groupJid = getNextGroup();
   const text = pickMessage();
 
-  for (const groupJid of GROUP_JIDS) {
-    try {
-      await sendText(groupJid, text);
+  console.log(`Target grup kali ini: ${groupJid}`);
 
-      // jeda kecil setelah kirim
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    } catch (error) {
-      console.error(error.message);
-    }
+  try {
+    await sendText(groupJid, text);
+  } catch (error) {
+    console.error(error.message);
   }
 
   console.log("Job selesai");
